@@ -155,7 +155,7 @@ export async function POST(req) {
   const data = await req.json();
 
   const url =
-    "https://render.carbone.io/render/d46901c758da6c5142a2a2a9e570973ebc1ea851599970aab4af7279512b086e?download=true";
+    "https://render.carbone.io/render/ca11ca88461bef09adc1b7662231c988ff7dd56e4c8e4b595a5c1f5e55c481b9?download=true";
 
   const requestBody = {
     data,
