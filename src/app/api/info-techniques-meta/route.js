@@ -39,6 +39,8 @@ export const POST = async (req) => {
         parking_idx: data.parking_idx,
         description: data.description,
         travees: data.travees,
+        nb_percements: data.nb_percements ?? 0,
+        avec_etude_structure: data.avec_etude_structure ?? false,
       },
     });
     return new Response(JSON.stringify(updated), {
