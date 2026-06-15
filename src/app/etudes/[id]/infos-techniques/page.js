@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { Collapse, Divider, Input, InputNumber, Table, Button, Flex, Spin } from 'antd';
+import { Collapse, Divider, Input, InputNumber, Table, Button, Flex, Spin, Checkbox } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { TypingAnimation } from '../../../../components/ui/typing-animation';
 import { SaveButton } from '../../../../components/general/saveButton';
@@ -136,6 +136,39 @@ function ParkingPanel({ pIndex, nbTravees, parkingsData, setParkingsData }) {
 
       <div className="my-15" />
       <Divider orientation="left" plain>
+        <span className="text-md font-bold">Travaux de génie civil et de structure</span>
+      </Divider>
+      <Flex gap={32} align="flex-end" style={{ marginBottom: 8 }}>
+        <div>
+          <div style={{ fontSize: 12, marginBottom: 4 }}>Nombre de percements supérieurs à 50 mm</div>
+          <InputNumber
+            min={0}
+            value={p.nb_percements}
+            onChange={v =>
+              setParkingsData(curr => {
+                const next = structuredClone(curr);
+                next[pIndex].nb_percements = v ?? 0;
+                return next;
+              })
+            }
+          />
+        </div>
+        <Checkbox
+          checked={p.avec_etude_structure}
+          onChange={e =>
+            setParkingsData(curr => {
+              const next = structuredClone(curr);
+              next[pIndex].avec_etude_structure = e.target.checked;
+              return next;
+            })
+          }
+        >
+          Avec étude de structure
+        </Checkbox>
+      </Flex>
+
+      <div className="my-15" />
+      <Divider orientation="left" plain>
         <span className="text-md font-bold">Arrivée Réseau & Panoplie</span>
       </Divider>
       <div className="my-5" />
@@ -248,6 +281,8 @@ const applySection = (acc, row) => {
 // DB -> UI mapping for meta row
 const mapMetaDbToUi = (meta) => ({
   description: meta?.description ?? "",
+  nb_percements: meta?.nb_percements ?? 0,
+  avec_etude_structure: meta?.avec_etude_structure ?? false,
   phases: Array.isArray(meta?.travees)
     ? meta.travees.map(t => ({
       from: t?.from ?? "",
@@ -273,6 +308,8 @@ export default function InfosTechniquesPage() {
       // empty per-parking UI shape
       const empty = pd.map(p => ({
         description: "",
+        nb_percements: 0,
+        avec_etude_structure: false,
         materiel: { reseau: [], parking: [], terre: [] },
         phases: Array.from({ length: Number(p?.travees) || 0 }, () => ({ from: '', to: '' })),
       }));
@@ -298,6 +335,8 @@ export default function InfosTechniquesPage() {
 
         const mapped = mapMetaDbToUi(m);
         filled[idx].description = mapped.description;
+        filled[idx].nb_percements = mapped.nb_percements;
+        filled[idx].avec_etude_structure = mapped.avec_etude_structure;
 
         const wanted = Number(pd[idx]?.travees) || 0;
         const normalizedPhases = Array.from({ length: wanted }, (_, i) => mapped.phases[i] ?? { from: "", to: "" });
@@ -360,6 +399,8 @@ export default function InfosTechniquesPage() {
           id: parseInt(id, 10),
           parking_idx: p,
           description: data.description,
+          nb_percements: data.nb_percements ?? 0,
+          avec_etude_structure: data.avec_etude_structure ?? false,
           travees: data.phases,
         }
         const result = await generalUpdate('/api/info-techniques-meta', new_data);
