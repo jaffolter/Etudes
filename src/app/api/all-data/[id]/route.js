@@ -97,14 +97,14 @@ const getRepartitionPhases = (infosTechniquesMeta) => {
 
 
 const getDescriptionTechnique = (infosTechniquesMeta) => {
-  const descriptionTechnique = { description_technique: [] };
-  infosTechniquesMeta.forEach((meta) => {
-    descriptionTechnique.description_technique.push({
-      idx: meta.parking_idx+1,  // ← directly from the model
+  return {
+    description_technique: infosTechniquesMeta.map((meta) => ({
+      idx: meta.parking_idx + 1,
       value: meta.description || "",
-    });
-  });
-  return descriptionTechnique;
+      nb_percements: meta.nb_percements ?? 0,
+      avec_etude_structure: meta.avec_etude_structure ?? false,
+    })),
+  };
 };
 
 const flattenMaterielInfoTechnique = (materielInfoTechnique) => {
