@@ -94,6 +94,11 @@ export async function fetchDIs(chantierId) {
   return res.json();
 }
 
+export async function fetchAllDIs() {
+  const res = await fetch(`/api/dis`);
+  return res.json();
+}
+
 export async function createDI(data) {
   const res = await fetch("/api/dis", {
     method: "POST",

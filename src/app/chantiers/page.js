@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Layout, Menu, Flex } from 'antd';
+import { Layout, Menu, Flex, Button, Space } from 'antd';
 import { HomeOutlined, BuildOutlined, BarChartOutlined, TeamOutlined } from "@ant-design/icons";
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -12,7 +12,8 @@ dayjs.extend(customParseFormat);
 
 import { Accueil, EnCours, PersonnelScreen, DrawerNew, DrawerEdit } from './components';
 import { GanttChart } from './GanttChart';
-import { fetchChantiers, createChantier, updateChantierStatut, updateChantier, syncAssignations, fetchAssignations } from './data';
+import { DIGanttChart } from './DIGanttChart';
+import { fetchChantiers, createChantier, updateChantierStatut, updateChantier, syncAssignations, fetchAssignations, fetchAllDIs } from './data';
 
 const { Header, Content, Sider, Footer } = Layout;
 
@@ -32,6 +33,8 @@ export default function ChantiersPage() {
   const [selected, setSelected] = useState('accueil');
   const [chantiers, setChantiers] = useState([]);
   const [editingRecord, setEditingRecord] = useState(null);
+  const [planningView, setPlanningView] = useState('chantiers'); // 'chantiers' | 'dis'
+  const [dis, setDis] = useState([]);
 
   const load = useCallback(async () => {
     const data = await fetchChantiers();
@@ -39,6 +42,12 @@ export default function ChantiersPage() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    if (selected === 'planning' && planningView === 'dis') {
+      fetchAllDIs().then(setDis);
+    }
+  }, [selected, planningView]);
 
   const handleAction = useCallback(async (record, action) => {
     await updateChantierStatut(record.id, action);
@@ -82,17 +91,37 @@ export default function ChantiersPage() {
       );
       case 'planning': return (
         <div className="p-8">
-          <h2 className="text-2xl font-bold mb-6">Planning</h2>
-          <GanttChart chantiers={chantiers
-            .filter(c => c.statut !== 'archive')
-            .sort((a, b) => {
-              const parse = s => s ? dayjs(s, 'DD/MM/YYYY') : null;
-              const da = parse(a.debut), db = parse(b.debut);
-              if (!da && !db) return 0;
-              if (!da) return 1;
-              if (!db) return -1;
-              return da.valueOf() - db.valueOf();
-            })} onRefresh={load} />
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold m-0">Planning</h2>
+            <Space.Compact>
+              <Button
+                type={planningView === 'chantiers' ? 'primary' : 'default'}
+                onClick={() => setPlanningView('chantiers')}
+              >
+                Par chantier
+              </Button>
+              <Button
+                type={planningView === 'dis' ? 'primary' : 'default'}
+                onClick={() => setPlanningView('dis')}
+              >
+                Par DIs
+              </Button>
+            </Space.Compact>
+          </div>
+          {planningView === 'chantiers' ? (
+            <GanttChart chantiers={chantiers
+              .filter(c => c.statut !== 'archive')
+              .sort((a, b) => {
+                const parse = s => s ? dayjs(s, 'DD/MM/YYYY') : null;
+                const da = parse(a.debut), db = parse(b.debut);
+                if (!da && !db) return 0;
+                if (!da) return 1;
+                if (!db) return -1;
+                return da.valueOf() - db.valueOf();
+              })} onRefresh={load} />
+          ) : (
+            <DIGanttChart dis={dis} />
+          )}
         </div>
       );
       case 'personnel': return <PersonnelScreen onRefresh={load} />;

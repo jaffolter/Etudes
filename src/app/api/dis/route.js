@@ -1,21 +1,16 @@
 import { prisma } from "../../../lib/prisma";
 
-// GET /api/dis?chantierId=X
+// GET /api/dis            -> all DIs (with chantier + personnel)
+// GET /api/dis?chantierId=X -> DIs for one chantier
 export const GET = async (req) => {
   const { searchParams } = new URL(req.url);
-  const chantierId = Number(searchParams.get("chantierId"));
-
-  if (!chantierId) {
-    return new Response(JSON.stringify({ error: "chantierId est requis" }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
+  const chantierIdParam = searchParams.get("chantierId");
+  const chantierId = chantierIdParam ? Number(chantierIdParam) : null;
 
   const dis = await prisma.dI.findMany({
-    where: { chantierId },
+    where: chantierId ? { chantierId } : undefined,
     orderBy: { date: "asc" },
-    include: { personnel: true },
+    include: chantierId ? { personnel: true } : { personnel: true, chantier: true },
   });
 
   return new Response(JSON.stringify(dis), {
