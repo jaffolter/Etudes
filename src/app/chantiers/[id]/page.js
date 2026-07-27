@@ -3,8 +3,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
-  Layout, Button, Tag, Drawer, Form, Input, DatePicker,
-  Switch, Space, Popconfirm, Spin
+  Layout, Button, Tag, Drawer, Form, Input, DatePicker, TimePicker,
+  Switch, Space, Popconfirm, Spin, Select
 } from 'antd';
 import { ArrowLeftOutlined, PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { TableTemplate } from '../../../components/general/table';
@@ -39,6 +39,10 @@ async function fetchDIs(chantierId) {
   const res = await fetch(`/api/dis?chantierId=${chantierId}`);
   return res.json();
 }
+async function fetchPersonnel() {
+  const res = await fetch('/api/personnel');
+  return res.json();
+}
 async function createDI(data) {
   const res = await fetch('/api/dis', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -60,7 +64,7 @@ async function deleteDI(id) {
 
 // ── DI Drawer ─────────────────────────────────────────────────────────────────
 
-function DIDrawer({ chantierId, record, onClose, onSaved }) {
+function DIDrawer({ chantierId, record, personnel, onClose, onSaved }) {
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
 
@@ -69,6 +73,7 @@ function DIDrawer({ chantierId, record, onClose, onSaved }) {
       form.setFieldsValue({
         ...record,
         date: record.date ? dayjs(record.date, 'DD/MM/YYYY') : null,
+        heure: record.heure ? dayjs(record.heure, 'HH:mm') : null,
       });
     } else {
       form.resetFields();
@@ -82,6 +87,7 @@ function DIDrawer({ chantierId, record, onClose, onSaved }) {
       const payload = {
         ...values,
         date: values.date ? values.date.format('DD/MM/YYYY') : '',
+        heure: values.heure ? values.heure.format('HH:mm') : '',
         planifie: values.planifie ?? false,
         chantierId,
       };
@@ -123,6 +129,19 @@ function DIDrawer({ chantierId, record, onClose, onSaved }) {
         <Form.Item name="date" label="Date (optionnel)">
           <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" placeholder="jj/mm/aaaa" />
         </Form.Item>
+        <Form.Item name="heure" label="Heure (optionnel)">
+          <TimePicker style={{ width: '100%' }} format="HH:mm" placeholder="hh:mm" />
+        </Form.Item>
+        <Form.Item name="telephone" label="Téléphone (optionnel)">
+          <Input placeholder="06 12 34 56 78" />
+        </Form.Item>
+        <Form.Item name="personnelId" label="Membre assigné (optionnel)">
+          <Select
+            allowClear
+            placeholder="Sélectionner un membre"
+            options={personnel.map(p => ({ value: p.id, label: `${p.prenom} ${p.nom}` }))}
+          />
+        </Form.Item>
         <Form.Item name="planifie" label="Planifié" valuePropName="checked">
           <Switch />
         </Form.Item>
@@ -139,14 +158,16 @@ export default function ChantierDetailPage() {
 
   const [chantier, setChantier] = useState(null);
   const [dis, setDis] = useState([]);
+  const [personnel, setPersonnel] = useState([]);
   const [loading, setLoading] = useState(true);
   const [diDrawer, setDiDrawer] = useState(null); // null | 'new' | record
   const [diSearch, setDiSearch] = useState('');
 
   const load = useCallback(async () => {
-    const [c, d] = await Promise.all([fetchChantier(id), fetchDIs(id)]);
+    const [c, d, p] = await Promise.all([fetchChantier(id), fetchDIs(id), fetchPersonnel()]);
     setChantier(c);
     setDis(d);
+    setPersonnel(p);
     setLoading(false);
   }, [id]);
 
@@ -156,6 +177,12 @@ export default function ChantierDetailPage() {
     { title: 'Nom client',   dataIndex: 'nom_client',  key: 'nom_client' },
     { title: 'N° box',       dataIndex: 'numero_box',  key: 'numero_box', render: v => v ?? '—' },
     { title: 'Date',         dataIndex: 'date',        key: 'date' },
+    { title: 'Heure',        dataIndex: 'heure',       key: 'heure',       render: v => v ?? '—' },
+    { title: 'Téléphone',    dataIndex: 'telephone',   key: 'telephone',   render: v => v ?? '—' },
+    {
+      title: 'Membre assigné', dataIndex: 'personnel', key: 'personnel',
+      render: p => p ? `${p.prenom} ${p.nom}` : '—',
+    },
     {
       title: 'Planifié', dataIndex: 'planifie', key: 'planifie',
       render: v => <Tag color={v ? 'green' : 'default'}>{v ? 'Oui' : 'Non'}</Tag>
@@ -262,6 +289,7 @@ export default function ChantierDetailPage() {
         <DIDrawer
           chantierId={Number(id)}
           record={diDrawer === 'new' ? null : diDrawer}
+          personnel={personnel}
           onClose={() => setDiDrawer(null)}
           onSaved={load}
         />

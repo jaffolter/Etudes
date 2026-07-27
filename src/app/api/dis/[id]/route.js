@@ -8,12 +8,16 @@ export const PUT = async (req, { params }) => {
   if (data.nom_client !== undefined) updateData.nom_client = data.nom_client.trim();
   if (data.numero_box !== undefined) updateData.numero_box = data.numero_box?.trim() || null;
   if (data.date !== undefined) updateData.date = data.date?.trim() || null;
+  if (data.heure !== undefined) updateData.heure = data.heure?.trim() || null;
+  if (data.telephone !== undefined) updateData.telephone = data.telephone?.trim() || null;
+  if (data.personnelId !== undefined) updateData.personnelId = data.personnelId ? Number(data.personnelId) : null;
   if (data.planifie !== undefined) updateData.planifie = Boolean(data.planifie);
 
   try {
     const updated = await prisma.dI.update({
       where: { id: Number(id) },
       data: updateData,
+      include: { personnel: true },
     });
     return new Response(JSON.stringify(updated), {
       headers: { "Content-Type": "application/json" },

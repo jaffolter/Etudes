@@ -166,6 +166,7 @@ model Personnel {
   nom      String
 
   assignations Assignation[]
+  dis          DI[]
 }
 
 model Assignation {
@@ -184,10 +185,14 @@ model DI {
   nom_client    String
   numero_box    String?
   date          String?
+  heure         String?
+  telephone     String?
   planifie      Boolean  @default(false)
   chantierId    Int
+  personnelId   Int?
 
-  chantier Chantier @relation(fields: [chantierId], references: [id])
+  chantier  Chantier   @relation(fields: [chantierId], references: [id])
+  personnel Personnel? @relation(fields: [personnelId], references: [id])
 
   createdAt DateTime @default(now())
 }

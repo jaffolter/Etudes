@@ -15,6 +15,7 @@ export const GET = async (req) => {
   const dis = await prisma.dI.findMany({
     where: { chantierId },
     orderBy: { date: "asc" },
+    include: { personnel: true },
   });
 
   return new Response(JSON.stringify(dis), {
@@ -28,6 +29,9 @@ export const POST = async (req) => {
   const date = data?.date?.trim() || null;
   const chantierId = Number(data?.chantierId);
   const numero_box = data?.numero_box?.trim() || null;
+  const heure = data?.heure?.trim() || null;
+  const telephone = data?.telephone?.trim() || null;
+  const personnelId = data?.personnelId ? Number(data.personnelId) : null;
   const planifie = Boolean(data?.planifie ?? false);
 
   if (!nom_client || !chantierId) {
@@ -39,7 +43,8 @@ export const POST = async (req) => {
 
   try {
     const created = await prisma.dI.create({
-      data: { nom_client, date, chantierId, numero_box, planifie },
+      data: { nom_client, date, chantierId, numero_box, heure, telephone, personnelId, planifie },
+      include: { personnel: true },
     });
     return new Response(JSON.stringify(created), {
       headers: { "Content-Type": "application/json" },
