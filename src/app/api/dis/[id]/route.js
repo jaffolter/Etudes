@@ -8,7 +8,8 @@ export const PUT = async (req, { params }) => {
   if (data.nom_client !== undefined) updateData.nom_client = data.nom_client.trim();
   if (data.numero_box !== undefined) updateData.numero_box = data.numero_box?.trim() || null;
   if (data.date !== undefined) updateData.date = data.date?.trim() || null;
-  if (data.heure !== undefined) updateData.heure = data.heure?.trim() || null;
+  if (data.heure_debut !== undefined) updateData.heure_debut = data.heure_debut?.trim() || null;
+  if (data.heure_fin !== undefined) updateData.heure_fin = data.heure_fin?.trim() || null;
   if (data.telephone !== undefined) updateData.telephone = data.telephone?.trim() || null;
   if (data.personnelId !== undefined) updateData.personnelId = data.personnelId ? Number(data.personnelId) : null;
   if (data.planifie !== undefined) updateData.planifie = Boolean(data.planifie);

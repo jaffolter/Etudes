@@ -185,7 +185,8 @@ model DI {
   nom_client    String
   numero_box    String?
   date          String?
-  heure         String?
+  heure_debut   String?
+  heure_fin     String?
   telephone     String?
   planifie      Boolean  @default(false)
   chantierId    Int

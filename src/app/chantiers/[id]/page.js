@@ -73,7 +73,8 @@ function DIDrawer({ chantierId, record, personnel, onClose, onSaved }) {
       form.setFieldsValue({
         ...record,
         date: record.date ? dayjs(record.date, 'DD/MM/YYYY') : null,
-        heure: record.heure ? dayjs(record.heure, 'HH:mm') : null,
+        heure_debut: record.heure_debut ? dayjs(record.heure_debut, 'HH:mm') : null,
+        heure_fin: record.heure_fin ? dayjs(record.heure_fin, 'HH:mm') : null,
       });
     } else {
       form.resetFields();
@@ -87,7 +88,8 @@ function DIDrawer({ chantierId, record, personnel, onClose, onSaved }) {
       const payload = {
         ...values,
         date: values.date ? values.date.format('DD/MM/YYYY') : '',
-        heure: values.heure ? values.heure.format('HH:mm') : '',
+        heure_debut: values.heure_debut ? values.heure_debut.format('HH:mm') : '',
+        heure_fin: values.heure_fin ? values.heure_fin.format('HH:mm') : '',
         planifie: values.planifie ?? false,
         chantierId,
       };
@@ -129,7 +131,10 @@ function DIDrawer({ chantierId, record, personnel, onClose, onSaved }) {
         <Form.Item name="date" label="Date (optionnel)">
           <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" placeholder="jj/mm/aaaa" />
         </Form.Item>
-        <Form.Item name="heure" label="Heure (optionnel)">
+        <Form.Item name="heure_debut" label="Heure début (optionnel)">
+          <TimePicker style={{ width: '100%' }} format="HH:mm" placeholder="hh:mm" />
+        </Form.Item>
+        <Form.Item name="heure_fin" label="Heure fin (optionnel)">
           <TimePicker style={{ width: '100%' }} format="HH:mm" placeholder="hh:mm" />
         </Form.Item>
         <Form.Item name="telephone" label="Téléphone (optionnel)">
@@ -177,7 +182,8 @@ export default function ChantierDetailPage() {
     { title: 'Nom client',   dataIndex: 'nom_client',  key: 'nom_client' },
     { title: 'N° box',       dataIndex: 'numero_box',  key: 'numero_box', render: v => v ?? '—' },
     { title: 'Date',         dataIndex: 'date',        key: 'date' },
-    { title: 'Heure',        dataIndex: 'heure',       key: 'heure',       render: v => v ?? '—' },
+    { title: 'Heure début',  dataIndex: 'heure_debut', key: 'heure_debut', render: v => v ?? '—' },
+    { title: 'Heure fin',    dataIndex: 'heure_fin',   key: 'heure_fin',   render: v => v ?? '—' },
     { title: 'Téléphone',    dataIndex: 'telephone',   key: 'telephone',   render: v => v ?? '—' },
     {
       title: 'Membre assigné', dataIndex: 'personnel', key: 'personnel',

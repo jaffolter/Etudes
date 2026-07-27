@@ -177,7 +177,11 @@ export function DIGanttChart({ dis }) {
             </div>
             <div>
               <div className="text-xs text-gray-400 mb-0.5">Date</div>
-              <div>{hoveredDI.date}{hoveredDI.heure ? ` à ${hoveredDI.heure}` : ''}</div>
+              <div>
+                {hoveredDI.date}
+                {hoveredDI.heure_debut ? ` de ${hoveredDI.heure_debut}` : ''}
+                {hoveredDI.heure_fin ? ` à ${hoveredDI.heure_fin}` : ''}
+              </div>
             </div>
             {hoveredDI.telephone && (
               <div>
