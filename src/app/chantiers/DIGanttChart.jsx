@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useMemo } from 'react';
 import Gantt from 'frappe-gantt';
-import { Button, Space } from 'antd';
+import { Button, Space, Select } from 'antd';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 
@@ -31,8 +31,15 @@ export function DIGanttChart({ dis }) {
   const containerRef = useRef(null);
   const [viewMode, setViewMode] = useState('Month');
   const [hoveredDI, setHoveredDI] = useState(null);
+  const [personnelFilter, setPersonnelFilter] = useState(null); // null = tous, 'unassigned', or personnelId
 
-  const valid = useMemo(() => dis.filter(d => parseDate(d.date)), [dis]);
+  const allValid = useMemo(() => dis.filter(d => parseDate(d.date)), [dis]);
+
+  const valid = useMemo(() => {
+    if (!personnelFilter) return allValid;
+    if (personnelFilter === 'unassigned') return allValid.filter(d => !d.personnelId);
+    return allValid.filter(d => d.personnelId === personnelFilter);
+  }, [allValid, personnelFilter]);
 
   const disById = useMemo(
     () => Object.fromEntries(valid.map(d => [String(d.id), d])),
@@ -42,19 +49,25 @@ export function DIGanttChart({ dis }) {
   useEffect(() => { disByIdRef.current = disById; }, [disById]);
 
   const personnelColors = useMemo(() => {
-    const ids = [...new Set(valid.map(d => d.personnelId).filter(Boolean))];
+    const ids = [...new Set(allValid.map(d => d.personnelId).filter(Boolean))];
     return Object.fromEntries(ids.map((id, i) => [id, PALETTE[i % PALETTE.length]]));
-  }, [valid]);
+  }, [allValid]);
 
   const personnelLegend = useMemo(() => {
     const seen = new Map();
-    valid.forEach(d => {
+    allValid.forEach(d => {
       if (d.personnelId && d.personnel && !seen.has(d.personnelId)) {
         seen.set(d.personnelId, `${d.personnel.prenom} ${d.personnel.nom}`);
       }
     });
     return [...seen.entries()].map(([id, name]) => ({ id, name, color: personnelColors[id] }));
-  }, [valid, personnelColors]);
+  }, [allValid, personnelColors]);
+
+  const filterOptions = useMemo(() => [
+    { value: null, label: 'Tous les membres' },
+    ...personnelLegend.map(({ id, name }) => ({ value: id, label: name })),
+    { value: 'unassigned', label: 'Non assigné' },
+  ], [personnelLegend]);
 
   useEffect(() => {
     const id = 'frappe-gantt-css';
@@ -108,7 +121,7 @@ export function DIGanttChart({ dis }) {
     };
   }, [valid, viewMode]);
 
-  if (valid.length === 0) {
+  if (allValid.length === 0) {
     return (
       <div className="flex items-center justify-center py-20 text-gray-400">
         Aucune DI avec une date renseignée.
@@ -131,14 +144,28 @@ export function DIGanttChart({ dis }) {
             Non assigné
           </div>
         </div>
-        <Space.Compact>
-          {VIEW_MODES.map(({ key, label }) => (
-            <Button key={key} type={viewMode === key ? 'primary' : 'default'} onClick={() => setViewMode(key)}>
-              {label}
-            </Button>
-          ))}
-        </Space.Compact>
+        <div className="flex items-center gap-3">
+          <Select
+            style={{ width: 220 }}
+            value={personnelFilter}
+            onChange={setPersonnelFilter}
+            options={filterOptions}
+          />
+          <Space.Compact>
+            {VIEW_MODES.map(({ key, label }) => (
+              <Button key={key} type={viewMode === key ? 'primary' : 'default'} onClick={() => setViewMode(key)}>
+                {label}
+              </Button>
+            ))}
+          </Space.Compact>
+        </div>
       </div>
+
+      {valid.length === 0 && (
+        <div className="flex items-center justify-center py-20 text-gray-400">
+          Aucune DI pour ce membre.
+        </div>
+      )}
 
       <style>{`
         .gantt-container, .gantt-container * {
