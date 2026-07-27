@@ -2,19 +2,12 @@
 
 import { useEffect, useRef, useState, useMemo } from 'react';
 import Gantt from 'frappe-gantt';
-import { Button, Space } from 'antd';
+import { Button, Space, Select } from 'antd';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import { updateChantier } from './data';
 
 dayjs.extend(customParseFormat);
-
-const TYPE_COLORS = {
-  enedis:              '#1677ff',
-  izi:                 '#52c41a',
-  copros:              '#fa8c16',
-  maison_individuelle: '#722ed1',
-};
 
 const TYPE_LABELS = {
   enedis:              'ENEDIS',
@@ -22,6 +15,13 @@ const TYPE_LABELS = {
   copros:              'Copros',
   maison_individuelle: 'Maison individuelle',
 };
+
+const PALETTE = [
+  '#1677ff', '#52c41a', '#fa8c16', '#722ed1',
+  '#eb2f96', '#13c2c2', '#faad14', '#f5222d',
+  '#2f54eb', '#a0d911',
+];
+const UNASSIGNED_COLOR = '#999999';
 
 const VIEW_MODES = [
   { key: 'Day',   label: 'Jour' },
@@ -42,15 +42,43 @@ export function GanttChart({ chantiers, onRefresh }) {
   const [saving, setSaving] = useState(false);
   const [pendingChanges, setPendingChanges] = useState({}); // { [id]: { id, debut, fin } }
   const [refreshKey, setRefreshKey] = useState(0);
+  const [equipeFilter, setEquipeFilter] = useState(null); // null = tous, 'unassigned', or equipeId
 
   // Keep callbacks in refs so they never cause effect re-runs
   const onRefreshRef = useRef(onRefresh);
   useEffect(() => { onRefreshRef.current = onRefresh; }, [onRefresh]);
 
-  const valid = useMemo(
+  const allValid = useMemo(
     () => chantiers.filter(c => parseDate(c.debut) && parseDate(c.fin)),
     [chantiers]
   );
+
+  const valid = useMemo(() => {
+    if (!equipeFilter) return allValid;
+    if (equipeFilter === 'unassigned') return allValid.filter(c => !c.equipeId);
+    return allValid.filter(c => c.equipeId === equipeFilter);
+  }, [allValid, equipeFilter]);
+
+  const equipeColors = useMemo(() => {
+    const ids = [...new Set(allValid.map(c => c.equipeId).filter(Boolean))];
+    return Object.fromEntries(ids.map((id, i) => [id, PALETTE[i % PALETTE.length]]));
+  }, [allValid]);
+
+  const equipeLegend = useMemo(() => {
+    const seen = new Map();
+    allValid.forEach(c => {
+      if (c.equipeId && c.equipe && !seen.has(c.equipeId)) {
+        seen.set(c.equipeId, c.equipe.nom);
+      }
+    });
+    return [...seen.entries()].map(([id, name]) => ({ id, name, color: equipeColors[id] }));
+  }, [allValid, equipeColors]);
+
+  const filterOptions = useMemo(() => [
+    { value: null, label: 'Toutes les équipes' },
+    ...equipeLegend.map(({ id, name }) => ({ value: id, label: name })),
+    { value: 'unassigned', label: 'Non assigné' },
+  ], [equipeLegend]);
 
   const chantiersById = useMemo(
     () => Object.fromEntries(valid.map(c => [String(c.id), c])),
@@ -97,7 +125,7 @@ export function GanttChart({ chantiers, onRefresh }) {
         start: parseDate(c.debut),
         end: parseDate(c.fin),
         progress: 0,
-        custom_class: `type-${c.type}`,
+        custom_class: c.equipeId ? `equipe-${c.equipeId}` : 'equipe-unassigned',
       };
     });
 
@@ -140,7 +168,7 @@ export function GanttChart({ chantiers, onRefresh }) {
 
   }, [valid, viewMode, refreshKey]);
 
-  if (valid.length === 0) {
+  if (allValid.length === 0) {
     return (
       <div className="flex items-center justify-center py-20 text-gray-400">
         Aucun chantier avec des dates de début et fin renseignées.
@@ -150,33 +178,53 @@ export function GanttChart({ chantiers, onRefresh }) {
 
   return (
     <div>
-      {/* Legend + view switcher */}
+      {/* Legend + filter + view switcher */}
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div className="flex gap-4 flex-wrap">
-          {Object.entries(TYPE_LABELS).map(([key, label]) => (
-            <div key={key} className="flex items-center gap-1.5 text-sm">
-              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: TYPE_COLORS[key] }} />
-              {label}
+          {equipeLegend.map(({ id, name, color }) => (
+            <div key={id} className="flex items-center gap-1.5 text-sm">
+              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: color }} />
+              {name}
             </div>
           ))}
+          <div className="flex items-center gap-1.5 text-sm">
+            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: UNASSIGNED_COLOR }} />
+            Non assigné
+          </div>
         </div>
-        <Space.Compact>
-          {VIEW_MODES.map(({ key, label }) => (
-            <Button key={key} type={viewMode === key ? 'primary' : 'default'} onClick={() => setViewMode(key)}>
-              {label}
-            </Button>
-          ))}
-        </Space.Compact>
+        <div className="flex items-center gap-3">
+          <Select
+            style={{ width: 220 }}
+            value={equipeFilter}
+            onChange={setEquipeFilter}
+            options={filterOptions}
+          />
+          <Space.Compact>
+            {VIEW_MODES.map(({ key, label }) => (
+              <Button key={key} type={viewMode === key ? 'primary' : 'default'} onClick={() => setViewMode(key)}>
+                {label}
+              </Button>
+            ))}
+          </Space.Compact>
+        </div>
       </div>
+
+      {valid.length === 0 && (
+        <div className="flex items-center justify-center py-20 text-gray-400">
+          Aucun chantier pour cette équipe.
+        </div>
+      )}
 
       <style>{`
         .gantt-container, .gantt-container * {
           font-family: 'Quicksand', sans-serif !important;
         }
-        ${Object.entries(TYPE_COLORS).map(([type, color]) => `
-          .type-${type} .bar { fill: ${color} !important; }
-          .type-${type} .bar-progress { fill: ${color} !important; filter: brightness(0.85); }
+        ${Object.entries(equipeColors).map(([id, color]) => `
+          .equipe-${id} .bar { fill: ${color} !important; }
+          .equipe-${id} .bar-progress { fill: ${color} !important; filter: brightness(0.85); }
         `).join('')}
+        .equipe-unassigned .bar { fill: ${UNASSIGNED_COLOR} !important; }
+        .equipe-unassigned .bar-progress { fill: ${UNASSIGNED_COLOR} !important; filter: brightness(0.85); }
         .gantt .bar-label { font-size: 11px; }
         .gantt .bar-label.big { fill: #333 !important; }
         .bar-wrapper { cursor: pointer; }
@@ -224,11 +272,17 @@ export function GanttChart({ chantiers, onRefresh }) {
             </div>
             <div>
               <div className="text-xs text-gray-400 mb-0.5">Type</div>
+              <span className="px-2 py-0.5 rounded-full bg-gray-200 text-gray-700 text-xs font-medium">
+                {TYPE_LABELS[hoveredChantier.type] ?? hoveredChantier.type}
+              </span>
+            </div>
+            <div>
+              <div className="text-xs text-gray-400 mb-0.5">Equipe</div>
               <span
                 className="px-2 py-0.5 rounded-full text-white text-xs font-medium"
-                style={{ backgroundColor: TYPE_COLORS[hoveredChantier.type] ?? '#999' }}
+                style={{ backgroundColor: hoveredChantier.equipeId ? equipeColors[hoveredChantier.equipeId] : UNASSIGNED_COLOR }}
               >
-                {TYPE_LABELS[hoveredChantier.type] ?? hoveredChantier.type}
+                {hoveredChantier.equipe?.nom ?? 'Non assigné'}
               </span>
             </div>
             <div>
@@ -245,12 +299,6 @@ export function GanttChart({ chantiers, onRefresh }) {
               <div>
                 <div className="text-xs text-gray-400 mb-0.5">N° affaire</div>
                 <div>{hoveredChantier.numero_affaire}</div>
-              </div>
-            )}
-            {hoveredChantier.personnel?.length > 0 && (
-              <div>
-                <div className="text-xs text-gray-400 mb-0.5">Personnel</div>
-                <div>{hoveredChantier.personnel.map(p => `${p.prenom} ${p.nom}`).join(', ')}</div>
               </div>
             )}
           </div>

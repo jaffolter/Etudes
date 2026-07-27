@@ -254,11 +254,7 @@ export default function ChantierDetailPage() {
               <InfoRow label="N° affaire"   value={chantier?.numero_affaire ?? '—'} />
               <InfoRow label="Début"        value={chantier?.debut ?? '—'} />
               <InfoRow label="Fin"          value={chantier?.fin ?? '—'} />
-              <InfoRow label="Personnel"
-                value={chantier?.personnel?.length
-                  ? chantier.personnel.map(p => `${p.prenom} ${p.nom}`).join(', ')
-                  : '—'}
-              />
+              <InfoRow label="Equipe"       value={chantier?.equipe?.nom ?? '—'} />
             </div>
           </div>
 

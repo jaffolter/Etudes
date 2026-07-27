@@ -5,7 +5,7 @@ export const GET = async (req, { params }) => {
   try {
     const chantier = await prisma.chantier.findUnique({
       where: { id: Number(id) },
-      include: { assignations: { include: { personnel: true } } },
+      include: { assignations: { include: { personnel: true } }, equipe: true },
     });
     if (!chantier) return new Response(JSON.stringify({ error: "Introuvable" }), { status: 404 });
     const { assignations, ...rest } = chantier;
@@ -47,11 +47,13 @@ export const PUT = async (req, { params }) => {
   if (data.numero_affaire !== undefined) updateData.numero_affaire = data.numero_affaire?.trim() || null;
   if (data.debut !== undefined)          updateData.debut = data.debut?.trim() || null;
   if (data.fin !== undefined)            updateData.fin = data.fin?.trim() || null;
+  if (data.equipeId !== undefined)       updateData.equipeId = data.equipeId ? Number(data.equipeId) : null;
 
   try {
     const updated = await prisma.chantier.update({
       where: { id: Number(id) },
       data: updateData,
+      include: { equipe: true },
     });
     return new Response(JSON.stringify(updated), {
       headers: { "Content-Type": "application/json" },

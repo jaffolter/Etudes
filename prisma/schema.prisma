@@ -154,10 +154,12 @@ model Chantier {
   telephone       String
   debut           String?
   fin             String?
+  equipeId        Int?
 
   createdAt    DateTime      @default(now())
   assignations Assignation[]
   dis          DI[]
+  equipe       Equipe?       @relation(fields: [equipeId], references: [id])
 }
 
 model Personnel {
@@ -175,6 +177,7 @@ model Equipe {
   nom  String @unique
 
   personnel Personnel[]
+  chantiers Chantier[]
 
   createdAt DateTime @default(now())
 }

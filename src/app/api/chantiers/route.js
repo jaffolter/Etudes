@@ -6,6 +6,7 @@ export const GET = async () => {
     include: {
       assignations: { include: { personnel: true } },
       dis: { select: { planifie: true } },
+      equipe: true,
     },
   });
 
@@ -32,6 +33,7 @@ export const POST = async (req) => {
   const numero_affaire = data?.numero_affaire?.trim() || null;
   const debut = data?.debut?.trim() || null;
   const fin = data?.fin?.trim() || null;
+  const equipeId = data?.equipeId ? Number(data.equipeId) : null;
 
   if (!adresse || !code_postal || !ville || !type || !telephone) {
     return new Response(JSON.stringify({ error: "adresse, code_postal, ville, type et telephone sont requis" }), {
@@ -42,7 +44,8 @@ export const POST = async (req) => {
 
   try {
     const chantier = await prisma.chantier.create({
-      data: { adresse, code_postal, ville, type, telephone, statut, numero_affaire, debut, fin },
+      data: { adresse, code_postal, ville, type, telephone, statut, numero_affaire, debut, fin, equipeId },
+      include: { equipe: true },
     });
 
     return new Response(JSON.stringify(chantier), {

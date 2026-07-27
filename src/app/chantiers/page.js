@@ -13,7 +13,7 @@ dayjs.extend(customParseFormat);
 import { Accueil, EnCours, PersonnelScreen, DrawerNew, DrawerEdit } from './components';
 import { GanttChart } from './GanttChart';
 import { DIGanttChart } from './DIGanttChart';
-import { fetchChantiers, createChantier, updateChantierStatut, updateChantier, syncAssignations, fetchAssignations, fetchAllDIs } from './data';
+import { fetchChantiers, createChantier, updateChantierStatut, updateChantier, fetchAllDIs } from './data';
 
 const { Header, Content, Sider, Footer } = Layout;
 
@@ -55,26 +55,18 @@ export default function ChantiersPage() {
   }, [load]);
 
   const handleCreate = useCallback(async (values) => {
-    const { personnelIds, ...chantierData } = values;
-    const newChantier = await createChantier(chantierData);
-    if (personnelIds?.length) {
-      await syncAssignations(newChantier.id, personnelIds);
-    }
+    await createChantier(values);
     await load();
     setSelected('en-cours');
   }, [load]);
 
   const handleUpdate = useCallback(async (id, values) => {
-    const { personnelIds, ...chantierData } = values;
-    await updateChantier(id, chantierData);
-    await syncAssignations(id, personnelIds ?? []);
+    await updateChantier(id, values);
     await load();
   }, [load]);
 
-  // Open edit drawer: fetch current assignations and attach to record
-  const handleOpenEdit = useCallback(async (record) => {
-    const personnelIds = await fetchAssignations(record.id);
-    setEditingRecord({ ...record, personnelIds });
+  const handleOpenEdit = useCallback((record) => {
+    setEditingRecord(record);
   }, []);
 
   const enCours = chantiers.filter(c => c.statut === 'en-cours');

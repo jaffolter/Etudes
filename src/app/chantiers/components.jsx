@@ -33,7 +33,7 @@ function formatDayMonth(val) {
 
 // ── Shared chantier form fields ───────────────────────────────────────────────
 
-function ChantierFormFields({ personnelOptions }) {
+function ChantierFormFields({ equipeOptions }) {
   return (
     <>
       <Form.Item name="adresse" label="Nom / Adresse"
@@ -75,12 +75,10 @@ function ChantierFormFields({ personnelOptions }) {
         </Form.Item>
       </Space.Compact>
 
-      <Form.Item name="personnelIds" label="Personnel assigné">
+      <Form.Item name="equipeId" label="Equipe (optionnel)">
         <Select
-          mode="multiple"
-          placeholder="Sélectionner le personnel"
-          options={personnelOptions}
-          optionFilterProp="label"
+          placeholder="Sélectionner une équipe"
+          options={equipeOptions}
           allowClear
         />
       </Form.Item>
@@ -90,7 +88,7 @@ function ChantierFormFields({ personnelOptions }) {
 
 // ── Chantiers columns ─────────────────────────────────────────────────────────
 
-function getColumns(onAction, onEdit, onView, totalPersonnelCount) {
+function getColumns(onAction, onEdit, onView) {
   return [
     { title: 'Adresse',  dataIndex: 'adresse', key: 'adresse' },
     {
@@ -105,13 +103,8 @@ function getColumns(onAction, onEdit, onView, totalPersonnelCount) {
       render: (val) => TYPE_OPTIONS.find(o => o.value === val)?.label ?? val },
     { title: 'Début',    dataIndex: 'debut',   key: 'debut', render: (val) => formatDayMonth(val) },
     { title: 'Fin',      dataIndex: 'fin',     key: 'fin',   render: (val) => formatDayMonth(val) },
-    { title: 'Personnel', dataIndex: 'personnel', key: 'personnel',
-      render: (val) => {
-        const count = val?.length ?? 0;
-        if (!count) return '—';
-        if (totalPersonnelCount > 0 && count >= totalPersonnelCount) return 'Tous';
-        return val.map(p => p.prenom).join(', ');
-      } },
+    { title: 'Equipe', dataIndex: 'equipe', key: 'equipe',
+      render: (equipe) => equipe ? <Tag>{equipe.nom}</Tag> : '—' },
     { title: 'DIs', key: 'dis',
       render: (_, record) => {
         const total = record.dis_total ?? 0;
@@ -157,24 +150,26 @@ export function Accueil() {
 export function EnCours({ data, onAction, onEdit, onView }) {
   const [search, setSearch] = useState('');
   const [selectedType, setSelectedType] = useState();
-  const [totalPersonnelCount, setTotalPersonnelCount] = useState(0);
+  const [selectedEquipe, setSelectedEquipe] = useState();
+  const [equipes, setEquipes] = useState([]);
 
   useEffect(() => {
-    fetchPersonnel().then((list) => setTotalPersonnelCount(list?.length ?? 0));
+    fetchEquipes().then(setEquipes);
   }, []);
 
   const columns = React.useMemo(
-    () => getColumns(onAction, onEdit, onView, totalPersonnelCount),
-    [onAction, onEdit, onView, totalPersonnelCount]
+    () => getColumns(onAction, onEdit, onView),
+    [onAction, onEdit, onView]
   );
   const filteredData = React.useMemo(() => {
     const q = search.trim().toLowerCase();
     return data.filter((item) => {
       const matchesSearch = !q || (item.adresse ?? '').toLowerCase().includes(q);
       const matchesType = !selectedType || item.type === selectedType;
-      return matchesSearch && matchesType;
+      const matchesEquipe = !selectedEquipe || item.equipeId === selectedEquipe;
+      return matchesSearch && matchesType && matchesEquipe;
     });
-  }, [data, search, selectedType]);
+  }, [data, search, selectedType, selectedEquipe]);
 
   return (
     <div className="flex flex-col gap-6 h-full w-full items-center justify-center py-10">
@@ -189,6 +184,14 @@ export function EnCours({ data, onAction, onEdit, onView }) {
             value={selectedType}
             onChange={setSelectedType}
             options={TYPE_OPTIONS}
+            style={{ width: 220 }}
+          />
+          <Select
+            placeholder="Filtrer par équipe"
+            allowClear
+            value={selectedEquipe}
+            onChange={setSelectedEquipe}
+            options={equipes.map(e => ({ value: e.id, label: e.nom }))}
             style={{ width: 220 }}
           />
           <Input.Search
@@ -385,7 +388,7 @@ export function DrawerNew({ onAction }) {
   const [open, setOpen] = useState(false);
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
-  const [personnelOptions, setPersonnelOptions] = useState([]);
+  const [equipeOptions, setEquipeOptions] = useState([]);
 
   const openDrawer = () => {
     form.resetFields();
@@ -394,8 +397,8 @@ export function DrawerNew({ onAction }) {
   };
 
   useEffect(() => {
-    fetchPersonnel().then(list =>
-      setPersonnelOptions(list.map(p => ({ value: p.id, label: `${p.prenom} ${p.nom}` })))
+    fetchEquipes().then(list =>
+      setEquipeOptions(list.map(e => ({ value: e.id, label: e.nom })))
     );
   }, [open]); // refresh list each time drawer opens
 
@@ -432,7 +435,7 @@ export function DrawerNew({ onAction }) {
         }
       >
         <Form form={form} layout="vertical" requiredMark={false}>
-          <ChantierFormFields personnelOptions={personnelOptions} />
+          <ChantierFormFields equipeOptions={equipeOptions} />
         </Form>
       </Drawer>
     </>
@@ -444,12 +447,12 @@ export function DrawerNew({ onAction }) {
 export function DrawerEdit({ record, onClose, onSave }) {
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
-  const [personnelOptions, setPersonnelOptions] = useState([]);
+  const [equipeOptions, setEquipeOptions] = useState([]);
 
   useEffect(() => {
     if (!record) return;
-    fetchPersonnel().then(list =>
-      setPersonnelOptions(list.map(p => ({ value: p.id, label: `${p.prenom} ${p.nom}` })))
+    fetchEquipes().then(list =>
+      setEquipeOptions(list.map(e => ({ value: e.id, label: e.nom })))
     );
   }, [record]);
 
@@ -459,7 +462,7 @@ export function DrawerEdit({ record, onClose, onSave }) {
         ...record,
         debut: record.debut ? dayjs(record.debut, 'DD/MM/YYYY') : null,
         fin:   record.fin   ? dayjs(record.fin,   'DD/MM/YYYY') : null,
-        personnelIds: record.personnelIds ?? [],
+        equipeId: record.equipeId ?? record.equipe?.id ?? null,
       });
     }
   }, [record, form]);
@@ -488,7 +491,7 @@ export function DrawerEdit({ record, onClose, onSave }) {
       }
     >
       <Form form={form} layout="vertical" requiredMark={false}>
-        <ChantierFormFields personnelOptions={personnelOptions} />
+        <ChantierFormFields equipeOptions={equipeOptions} />
       </Form>
     </Drawer>
   );
