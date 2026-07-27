@@ -5,11 +5,17 @@ export const PUT = async (req, { params }) => {
   const data = await req.json();
   const prenom = data?.prenom?.trim();
   const nom = data?.nom?.trim();
+  const equipeIds = Array.isArray(data?.equipeIds) ? data.equipeIds.map(Number) : null;
 
   try {
     const updated = await prisma.personnel.update({
       where: { id: Number(id) },
-      data: { ...(prenom && { prenom }), ...(nom && { nom }) },
+      data: {
+        ...(prenom && { prenom }),
+        ...(nom && { nom }),
+        ...(equipeIds !== null && { equipes: { set: equipeIds.map(id => ({ id })) } }),
+      },
+      include: { equipes: true },
     });
     return new Response(JSON.stringify(updated), {
       headers: { "Content-Type": "application/json" },
@@ -22,9 +28,14 @@ export const PUT = async (req, { params }) => {
 
 export const DELETE = async (req, { params }) => {
   const { id } = params;
+  const personnelId = Number(id);
 
   try {
-    await prisma.personnel.delete({ where: { id: Number(id) } });
+    await prisma.$transaction([
+      prisma.assignation.deleteMany({ where: { personnelId } }),
+      prisma.dI.updateMany({ where: { personnelId }, data: { personnelId: null } }),
+      prisma.personnel.delete({ where: { id: personnelId } }),
+    ]);
     return new Response(JSON.stringify({ success: true }), {
       headers: { "Content-Type": "application/json" },
     });

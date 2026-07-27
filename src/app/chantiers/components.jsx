@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { RetroGrid } from "../../components/ui/retro-grid";
 import { TableTemplate } from "../../components/general/table";
-import { Space, Popconfirm, Button, Popover, Drawer, Form, Input, Select, DatePicker } from 'antd';
+import { Space, Popconfirm, Button, Popover, Drawer, Form, Input, Select, DatePicker, message, Tag, Divider } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from "@ant-design/icons";
 import { useRouter } from 'next/navigation';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
-import { fetchPersonnel, createPersonnel, updatePersonnel, deletePersonnel } from './data';
+import { fetchPersonnel, createPersonnel, updatePersonnel, deletePersonnel, fetchEquipes, createEquipe } from './data';
 
 dayjs.extend(customParseFormat);
 
@@ -209,6 +209,9 @@ export function EnCours({ data, onAction, onEdit, onView }) {
 
 export function PersonnelScreen({ onRefresh }) {
   const [data, setData] = useState([]);
+  const [equipes, setEquipes] = useState([]);
+  const [newEquipeName, setNewEquipeName] = useState('');
+  const [creatingEquipe, setCreatingEquipe] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [form] = Form.useForm();
@@ -219,7 +222,12 @@ export function PersonnelScreen({ onRefresh }) {
     setData(res);
   };
 
-  useEffect(() => { load(); }, []);
+  const loadEquipes = async () => {
+    const res = await fetchEquipes();
+    setEquipes(res);
+  };
+
+  useEffect(() => { load(); loadEquipes(); }, []);
 
   const openCreate = () => {
     setEditingRecord(null);
@@ -229,8 +237,24 @@ export function PersonnelScreen({ onRefresh }) {
 
   const openEdit = (record) => {
     setEditingRecord(record);
-    form.setFieldsValue(record);
+    form.setFieldsValue({ ...record, equipeIds: record.equipes?.map(e => e.id) ?? [] });
     setDrawerOpen(true);
+  };
+
+  const handleCreateEquipe = async () => {
+    const nom = newEquipeName.trim();
+    if (!nom) return;
+    setCreatingEquipe(true);
+    try {
+      const created = await createEquipe(nom);
+      setEquipes(prev => [...prev, created]);
+      form.setFieldValue('equipeIds', [...(form.getFieldValue('equipeIds') ?? []), created.id]);
+      setNewEquipeName('');
+    } catch (err) {
+      message.error(err.message ?? "Erreur lors de la création de l'équipe");
+    } finally {
+      setCreatingEquipe(false);
+    }
   };
 
   const onSave = async () => {
@@ -254,14 +278,24 @@ export function PersonnelScreen({ onRefresh }) {
   };
 
   const onDelete = async (record) => {
-    await deletePersonnel(record.id);
-    await load();
-    onRefresh?.();
+    try {
+      await deletePersonnel(record.id);
+      await load();
+      onRefresh?.();
+    } catch (err) {
+      message.error(err.message ?? 'Erreur lors de la suppression');
+    }
   };
 
   const columns = [
     { title: 'Prénom', dataIndex: 'prenom', key: 'prenom' },
     { title: 'Nom',    dataIndex: 'nom',    key: 'nom' },
+    {
+      title: 'Equipe', dataIndex: 'equipes', key: 'equipes',
+      render: (list) => list?.length
+        ? <Space size={[0, 4]} wrap>{list.map(e => <Tag key={e.id}>{e.nom}</Tag>)}</Space>
+        : '—',
+    },
     {
       title: 'Action', key: 'action',
       render: (_, record) => (
@@ -313,6 +347,31 @@ export function PersonnelScreen({ onRefresh }) {
           <Form.Item name="nom" label="Nom"
             rules={[{ required: true, message: "Requis" }]}>
             <Input placeholder="Dupont" />
+          </Form.Item>
+          <Form.Item name="equipeIds" label="Equipe">
+            <Select
+              mode="multiple"
+              placeholder="Sélectionner une ou plusieurs équipes"
+              options={equipes.map(e => ({ value: e.id, label: e.nom }))}
+              dropdownRender={(menu) => (
+                <>
+                  {menu}
+                  <Divider style={{ margin: '8px 0' }} />
+                  <Space style={{ padding: '0 8px 8px' }}>
+                    <Input
+                      placeholder="Nouvelle équipe"
+                      value={newEquipeName}
+                      onChange={(e) => setNewEquipeName(e.target.value)}
+                      onKeyDown={(e) => e.stopPropagation()}
+                      onPressEnter={handleCreateEquipe}
+                    />
+                    <Button type="text" icon={<PlusOutlined />} loading={creatingEquipe} onClick={handleCreateEquipe}>
+                      Ajouter
+                    </Button>
+                  </Space>
+                </>
+              )}
+            />
           </Form.Item>
         </Form>
       </Drawer>

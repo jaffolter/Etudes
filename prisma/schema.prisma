@@ -167,6 +167,16 @@ model Personnel {
 
   assignations Assignation[]
   dis          DI[]
+  equipes      Equipe[]
+}
+
+model Equipe {
+  id   Int    @id @default(autoincrement())
+  nom  String @unique
+
+  personnel Personnel[]
+
+  createdAt DateTime @default(now())
 }
 
 model Assignation {

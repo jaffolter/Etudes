@@ -68,6 +68,30 @@ export async function updatePersonnel(id, data) {
 
 export async function deletePersonnel(id) {
   const res = await fetch(`/api/personnel/${id}`, { method: "DELETE" });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error ?? `Erreur ${res.status}`);
+  }
+  return res.json();
+}
+
+// ── Equipes ───────────────────────────────────────────────────────────────────
+
+export async function fetchEquipes() {
+  const res = await fetch("/api/equipes");
+  return res.json();
+}
+
+export async function createEquipe(nom) {
+  const res = await fetch("/api/equipes", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ nom }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error ?? `Erreur ${res.status}`);
+  }
   return res.json();
 }
 
